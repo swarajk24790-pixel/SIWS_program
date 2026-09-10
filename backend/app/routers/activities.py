@@ -7,7 +7,6 @@ from backend.app.core.dependencies import get_current_user
 from backend.app.models.user import User
 from backend.app.models.activity import ActivityItem
 from backend.app.schemas.activity import ActivityItemCreate, ActivityItemOut, ActivityItemUpdate
-from backend.app.core.firestore_db import firestore_service
 from backend.app.services.ai_service import generate_activity_bullets
 
 router = APIRouter(prefix="/activities", tags=["Unified Activity Feed (Auto + Manual + Import)"])
@@ -119,21 +118,6 @@ async def add_activity_item(
     db.add(item)
     await db.commit()
     await db.refresh(item)
-
-    # Sync to Firestore
-    firestore_service.set_document("activity_items", item.id, {
-        "id": item.id,
-        "user_id": item.user_id,
-        "title": item.title,
-        "type": item.type,
-        "source": item.source,
-        "subtitle": item.subtitle,
-        "date": item.date,
-        "description": item.description,
-        "bullets": item.bullets,
-        "tags": item.tags
-    })
-
     return item
 
 @router.delete("/{item_id}")
@@ -153,8 +137,5 @@ async def delete_activity_item(
     
     await db.delete(item)
     await db.commit()
-
-    # Sync to Firestore
-    firestore_service.delete_document("activity_items", item_id)
 
     return {"success": True, "message": "Item deleted."}

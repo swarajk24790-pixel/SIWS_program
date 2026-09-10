@@ -1,4 +1,3 @@
-import time
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from jose import jwt, JWTError
@@ -14,7 +13,7 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create local JWT access token."""
+    """Create local JWT access token backed by SQLite."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -26,26 +25,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 async def verify_token_payload(token: str) -> Optional[Dict[str, Any]]:
-    """
-    Dual-mode token verification:
-    1. If FIREBASE_PROJECT_ID is specified, inspects or verifies with Firebase.
-    2. Otherwise verifies standard signed JWT.
-    """
+    """Verify signed JWT against local secret key."""
     try:
-        # First attempt local JWT decoding
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
-        # If token came from Firebase, decode payload (for dev/demo fallback)
-        try:
-            unverified = jwt.get_unverified_claims(token)
-            if unverified and ("user_id" in unverified or "sub" in unverified):
-                return {
-                    "sub": unverified.get("sub") or unverified.get("user_id"),
-                    "email": unverified.get("email", ""),
-                    "name": unverified.get("name", "Student User"),
-                    "firebase": True
-                }
-        except Exception:
-            pass
         return None

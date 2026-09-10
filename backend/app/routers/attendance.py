@@ -15,7 +15,6 @@ from backend.app.schemas.attendance import (
     WhatIfRequest,
     WhatIfResponse
 )
-from backend.app.core.firestore_db import firestore_service
 
 router = APIRouter(prefix="/attendance", tags=["Attendance Management & What-If Analyzer"])
 
@@ -90,19 +89,6 @@ async def create_subject(
     
     pct = round((subject.attended / subject.held * 100), 1) if subject.held > 0 else 0.0
 
-    # Sync to Firestore
-    firestore_service.set_document("attendance_subjects", subject.id, {
-        "id": subject.id,
-        "user_id": subject.user_id,
-        "name": subject.name,
-        "code": subject.code,
-        "attended": subject.attended,
-        "held": subject.held,
-        "required": subject.required,
-        "percentage": pct,
-        "faculty": subject.faculty
-    })
-
     return AttendanceSubjectOut(
         id=subject.id,
         user_id=subject.user_id,
@@ -161,19 +147,6 @@ async def log_attendance(
     await db.refresh(subject)
 
     pct = round((subject.attended / subject.held * 100), 1) if subject.held > 0 else 0.0
-
-    # Sync to Firestore
-    firestore_service.set_document("attendance_subjects", subject.id, {
-        "id": subject.id,
-        "user_id": subject.user_id,
-        "name": subject.name,
-        "code": subject.code,
-        "attended": subject.attended,
-        "held": subject.held,
-        "required": subject.required,
-        "percentage": pct,
-        "faculty": subject.faculty
-    })
 
     return AttendanceSubjectOut(
         id=subject.id,

@@ -6,9 +6,8 @@ from backend.app.core.security import create_access_token, get_password_hash, ve
 from backend.app.core.dependencies import get_current_user
 from backend.app.models.user import User
 from backend.app.schemas.user import UserCreate, UserLogin, UserOut, UserUpdate, TokenResponse
-from backend.app.core.firestore_db import firestore_service
 
-router = APIRouter(prefix="/auth", tags=["Authentication & Profile"])
+router = APIRouter(prefix="/auth", tags=["Authentication & Profile (SQLite)"])
 
 @router.post("/register", response_model=TokenResponse)
 async def register_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
@@ -28,20 +27,6 @@ async def register_user(payload: UserCreate, db: AsyncSession = Depends(get_db))
     await db.refresh(user)
 
     token = create_access_token({"sub": user.id, "email": user.email, "name": user.name})
-
-    # Sync to Firestore
-    firestore_service.set_document("users", user.id, {
-        "id": user.id,
-        "name": user.name,
-        "email": user.email,
-        "college": user.college or "",
-        "course": user.course or "",
-        "semester": user.semester or "",
-        "cgpa": user.cgpa or 0,
-        "github": user.github or "",
-        "linkedin": user.linkedin or "",
-    })
-
     return TokenResponse(access_token=token, user=user)
 
 @router.post("/login", response_model=TokenResponse)
@@ -72,20 +57,4 @@ async def update_my_profile(
     
     await db.commit()
     await db.refresh(current_user)
-
-    # Sync to Firestore database
-    firestore_service.set_document("users", current_user.id, {
-        "id": current_user.id,
-        "name": current_user.name,
-        "email": current_user.email,
-        "college": current_user.college,
-        "course": current_user.course,
-        "semester": current_user.semester,
-        "cgpa": current_user.cgpa,
-        "target_attendance": current_user.target_attendance,
-        "github": current_user.github,
-        "linkedin": current_user.linkedin,
-    })
-
     return current_user
-

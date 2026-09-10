@@ -11,10 +11,9 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """
-    Returns current authenticated student.
-    Dual-mode support:
-    - If Bearer token is provided, verifies JWT / Firebase ID token.
-    - If no Bearer token is provided (dev/demo mode), loads or seeds the default demo student.
+    Returns current authenticated student from local SQLite.
+    - If Bearer token is provided, verifies JWT and loads student record.
+    - If no Bearer token is provided, loads or seeds the demo student.
     """
     email = "swaraj@siws.edu"
     name = "Swaraj K."
@@ -26,16 +25,15 @@ async def get_current_user(
             email = payload["email"]
             name = payload.get("name", name)
 
-    # Fetch user by email
+    # Fetch user by email from SQLite database
     stmt = select(User).where(User.email == email)
     result = await db.execute(stmt)
     user = result.scalars().first()
 
-    # Auto-provision user if does not exist yet
+    # Auto-provision user in SQLite if does not exist yet
     if not user:
         clean_name = name
         if clean_name == "Swaraj K." and email != "swaraj@siws.edu":
-            # Derive readable name from email e.g. alex.miller@college.edu -> Alex Miller
             user_part = email.split("@")[0].replace(".", " ").replace("_", " ").title()
             clean_name = user_part or "Student User"
 

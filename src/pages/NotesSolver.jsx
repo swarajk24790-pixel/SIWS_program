@@ -25,7 +25,14 @@ export default function NotesSolver() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = React.useRef(null);
 
-  const [docs, setDocs] = useState([]);
+  const [docs, setDocs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('unipilot_notes_docs');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
   // Dynamic AI State for current document
   const [docSummaries, setDocSummaries] = useState({});
@@ -101,7 +108,11 @@ export default function NotesSolver() {
         status: 'Ready',
         uploadedAt: 'Just now'
       };
-      setDocs(prev => [newDoc, ...prev]);
+      setDocs(prev => {
+        const updated = [newDoc, ...prev];
+        try { localStorage.setItem('unipilot_notes_docs', JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
       setSelectedDocId(newDoc.id);
       setIsUploading(false);
     }, 800);
@@ -111,7 +122,12 @@ export default function NotesSolver() {
     fileInputRef.current?.click();
   };
 
-  const activeDoc = docs.find(d => d.id === selectedDocId) || docs[0];
+  const activeDoc = docs.find(d => d.id === selectedDocId) || docs[0] || {
+    id: 'placeholder',
+    title: 'No document selected',
+    subject: 'Upload a document to start',
+    status: 'Ready'
+  };
 
   const handleGenerateSummaryAI = async () => {
     setIsLoadingSummary(true);

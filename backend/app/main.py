@@ -67,5 +67,5 @@ async def health_check():
     return {
         "status": "healthy",
         "database": "sqlite+aiosqlite",
-        "auth_mode": "Firebase / Local JWT Dual Mode"
+        "auth_mode": "SQLite-backed JWT Mode"
     }

@@ -6,7 +6,6 @@ from backend.app.core.database import get_db
 from backend.app.core.dependencies import get_current_user
 from backend.app.models.user import User
 from backend.app.models.activity import ActivityItem
-from backend.app.core.firestore_db import firestore_service
 
 router = APIRouter(prefix="/resume", tags=["Living ATS Resume & Portfolio Pipeline"])
 
@@ -15,10 +14,7 @@ async def compile_living_resume(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
-    """
-    Compiles an ATS-ready structured resume payload by aggregating
-    all verified milestones from the Unified Activity Feed.
-    """
+    """Compiles all verified activities from SQLite into an ATS-optimized living resume model."""
     stmt = select(ActivityItem).where(ActivityItem.user_id == current_user.id).order_by(ActivityItem.created_at.desc())
     items = (await db.execute(stmt)).scalars().all()
 
@@ -27,26 +23,28 @@ async def compile_living_resume(
     certifications = []
     leadership = []
 
-    for it in items:
+    for item in items:
         entry = {
-            "title": it.title,
-            "subtitle": it.subtitle,
-            "date": it.date,
-            "description": it.description,
-            "bullets": it.bullets,
-            "tags": it.tags or []
+            "id": item.id,
+            "title": item.title,
+            "subtitle": item.subtitle,
+            "date": item.date,
+            "bullets": item.bullets,
+            "tags": item.tags
         }
-        if it.type == "internship":
+        if item.type in ["internship", "job"]:
             work_experience.append(entry)
-        elif it.type in ["project", "hackathon"]:
+        elif item.type in ["project", "hackathon"]:
             projects.append(entry)
-        elif it.type == "course":
+        elif item.type in ["course", "certification"]:
             certifications.append(entry)
-        elif it.type == "responsibility":
+        elif item.type in ["responsibility", "leadership"]:
             leadership.append(entry)
+        else:
+            projects.append(entry)
 
-    return {
-        "candidate": {
+    result = {
+        "student": {
             "name": current_user.name,
             "email": current_user.email,
             "college": current_user.college,
@@ -56,12 +54,7 @@ async def compile_living_resume(
             "github": current_user.github,
             "linkedin": current_user.linkedin
         },
-        "summary": f"High-performing {current_user.course} student with a {current_user.cgpa} CGPA. Experienced in distributed architectures, full-stack systems, and competitive hackathons.",
-        "skills": {
-            "languages": ["Python", "Go", "JavaScript / TypeScript", "C++", "SQL"],
-            "frameworks": ["FastAPI", "React", "Node.js", "PyTorch", "Docker"],
-            "core": ["Distributed Systems", "Database Internals", "Operating Systems", "RESTful APIs"]
-        },
+        "summary": f"{current_user.course} student at {current_user.college} specializing in distributed systems, high-concurrency microservices, and practical machine learning applications. Demonstrates proven track record in hackathons and open-source software.",
         "work_experience": work_experience,
         "projects": projects,
         "certifications": certifications,
@@ -69,9 +62,6 @@ async def compile_living_resume(
         "total_verified_feed_items": len(items),
         "ats_score": 94
     }
-
-    # Sync to Firestore resumes collection
-    firestore_service.set_document("resumes", current_user.id, result)
 
     return result
 
@@ -90,8 +80,4 @@ async def compile_portfolio_bundle(
         "custom_domain": None
     }
 
-    # Sync to Firestore portfolios collection
-    firestore_service.set_document("portfolios", current_user.id, portfolio)
-
     return portfolio
-
