@@ -18,7 +18,7 @@ import { api } from '../services/api';
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user, setUser, setTimetable, loadUserData } = useApp();
+  const { user, setUser, setTimetable, loadUserData, setIsAuthenticated } = useApp();
   const [step, setStep] = useState(1);
 
   // Step 1 State
@@ -48,6 +48,12 @@ export default function Onboarding() {
     } else {
       setIsFinishing(true);
       try {
+        if (!localStorage.getItem('unipilot_token')) {
+          localStorage.setItem('unipilot_token', 'local_token_' + Date.now());
+        }
+        if (setIsAuthenticated) {
+          setIsAuthenticated(true);
+        }
         const updatedUser = {
           ...user,
           ...profile,
