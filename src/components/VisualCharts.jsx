@@ -9,21 +9,41 @@ import { TrendingUp, AlertTriangle, CheckCircle2, ShieldCheck, Clock, BarChart3,
 export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSelectSubject }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
-  const subjects = attendance.map((s) => {
-    const pct = Math.round((s.attended / s.held) * 100);
+  const rawList = Array.isArray(attendance) && attendance.length > 0
+    ? attendance
+    : [
+        { id: 'cs301', name: 'Distributed Systems', code: 'CS 301', attended: 34, held: 40, required: 75 },
+        { id: 'cs305', name: 'Database Management', code: 'CS 305', attended: 25, held: 35, required: 75 },
+        { id: 'cs312', name: 'AI & Neural Nets', code: 'CS 312', attended: 36, held: 38, required: 75 },
+        { id: 'cs318', name: 'Computer Networks', code: 'CS 318', attended: 29, held: 32, required: 75 },
+      ];
+
+  const subjects = rawList.map((s, idx) => {
+    const held = Number(s.held) || 0;
+    const attended = Number(s.attended) || 0;
+    const pct = held > 0 ? Math.round((attended / held) * 100) : 0;
+    const required = Number(s.required) || 75;
     return {
       ...s,
+      id: s.id || `sub-${idx}`,
+      name: s.name || `Subject ${idx + 1}`,
+      code: s.code || (s.name ? s.name.split(' ').map(w => w[0]).join('').slice(0, 6).toUpperCase() : `SUB${idx+1}`),
+      held,
+      attended,
+      required,
       pct,
-      isCritical: pct < s.required,
-      isWarning: pct >= s.required && pct < s.required + 5,
-      isSafe: pct >= s.required + 5,
+      isCritical: pct < required,
+      isWarning: pct >= required && pct < required + 5,
+      isSafe: pct >= required + 5,
     };
   });
 
   const chartHeight = 160;
-  const chartWidth = 500;
-  const barWidth = 44;
-  const gap = (chartWidth - subjects.length * barWidth) / (subjects.length + 1);
+  const numSubs = Math.max(1, subjects.length);
+  const chartWidth = Math.max(500, numSubs * 85);
+  const barWidth = Math.min(50, Math.max(34, (chartWidth - 60) / numSubs - 22));
+  const totalBarsWidth = numSubs * barWidth;
+  const gap = (chartWidth - totalBarsWidth) / (numSubs + 1);
   const thresholdY = chartHeight - (75 / 100) * chartHeight;
 
   return (
@@ -35,13 +55,13 @@ export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSele
           </div>
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span>Attendance vs. 75% Threshold Diagram</span>
+              <span>Attendance vs. 75% Cutoff Diagram</span>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300">
                 Live Data
               </span>
             </h3>
             <p className="text-xs text-slate-400">
-              Visual benchmark against university exam clearance cutoff
+              Visual benchmark against university 75% exam clearance cutoff
             </p>
           </div>
         </div>
@@ -64,10 +84,10 @@ export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSele
       </div>
 
       {/* SVG Bar Chart with 75% Threshold Line */}
-      <div className="relative pt-2">
+      <div className="relative pt-2 overflow-x-auto scrollbar-thin">
         <svg
-          viewBox={`0 0 ${chartWidth} ${chartHeight + 40}`}
-          className="w-full h-44 sm:h-52 overflow-visible select-none"
+          viewBox={`0 0 ${chartWidth} ${chartHeight + 42}`}
+          className="w-full h-44 sm:h-52 overflow-visible select-none min-w-[480px]"
         >
           <defs>
             <linearGradient id="barSafe" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -101,7 +121,7 @@ export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSele
                   opacity={is75 ? '0.85' : '0.4'}
                 />
                 <text
-                  x={chartWidth - 4}
+                  x={chartWidth - 6}
                   y={y - 4}
                   textAnchor="end"
                   fill={is75 ? '#f43f5e' : '#64748b'}
@@ -109,7 +129,7 @@ export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSele
                   fontWeight={is75 ? 'bold' : 'normal'}
                   fontFamily="monospace"
                 >
-                  {level}% {is75 && '★ CUTOFF'}
+                  {level}% {is75 && '★ 75% CUTOFF'}
                 </text>
               </g>
             );
@@ -148,7 +168,7 @@ export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSele
                     x={x - 4}
                     y={y - 4}
                     width={barWidth + 8}
-                    height={barH + 8}
+                    height={Math.max(4, barH + 8)}
                     rx="10"
                     fill="none"
                     stroke={stroke}
@@ -197,7 +217,7 @@ export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSele
                 {/* Attended / Held count */}
                 <text
                   x={x + barWidth / 2}
-                  y={chartHeight + 29}
+                  y={chartHeight + 30}
                   textAnchor="middle"
                   fill="#64748b"
                   fontSize="9.5"
@@ -214,10 +234,10 @@ export function AttendanceThresholdChart({ attendance, selectedSubjectId, onSele
       <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-darkBorder/40">
         <span className="flex items-center gap-1.5">
           <Activity className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Click any bar to instantly model attendance in the What-If Calculator</span>
+          <span>Click any bar to inspect attendance in the What-If Calculator</span>
         </span>
         <span className="font-mono text-[11px] text-slate-400">
-          Target Threshold: <strong>75.0%</strong>
+          Target Cutoff: <strong>75.0%</strong>
         </span>
       </div>
     </div>

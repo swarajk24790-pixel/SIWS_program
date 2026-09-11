@@ -14,10 +14,14 @@ import {
   Flame, 
   ArrowUpRight,
   TrendingUp,
-  Award
+  Award,
+  Brain,
+  Trophy
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { WeeklyWorkloadChart } from '../components/VisualCharts';
+import { WeeklyWorkloadChart, AttendanceThresholdChart } from '../components/VisualCharts';
+import { ShieldCheck, ArrowLeft, Edit3, X, Lock } from 'lucide-react';
+import CareerAdvisorWidget from '../components/CareerAdvisorWidget';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -27,8 +31,36 @@ export default function Dashboard() {
     assignments, 
     toggleAssignmentStatus, 
     setQuickAddOpen,
-    activities 
+    activities,
+    quizResults,
+    adminViewingStudent,
+    clearAdminViewingStudent,
+    isAdmin,
+    adminUpdateAttendance,
+    adminSetAttendance
   } = useApp();
+
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [editingSub, setEditingSub] = useState(null);
+  const [editAttended, setEditAttended] = useState(0);
+  const [editHeld, setEditHeld] = useState(0);
+
+  const activeUser = adminViewingStudent ? {
+    ...user,
+    id: adminViewingStudent.id,
+    name: adminViewingStudent.name || user.name,
+    email: adminViewingStudent.email || user.email,
+    college: adminViewingStudent.college || user.college,
+    course: adminViewingStudent.course || user.course,
+    semester: adminViewingStudent.semester || user.semester,
+    cgpa: adminViewingStudent.cgpa || user.cgpa,
+  } : user;
+
+  const activeAttendance = (adminViewingStudent?.subjects && adminViewingStudent.subjects.length > 0)
+    ? adminViewingStudent.subjects
+    : attendance;
+
+  const canEditAttendance = isAdmin || !!adminViewingStudent;
 
   const [chatInput, setChatInput] = useState('');
 
@@ -48,17 +80,59 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Admin Superview Mode Sticky Header */}
+      {adminViewingStudent && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-violet-950/90 via-slate-900 to-indigo-950/80 border border-violet-500/40 shadow-2xl backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-300 shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-violet-500/30 text-violet-200 border border-violet-400/30">
+                  Admin Superview
+                </span>
+                <span className="text-xs text-slate-400">Viewing Live Student Dashboard</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-bold text-white mt-0.5">
+                {activeUser.name} <span className="text-xs text-slate-400 font-normal">({activeUser.email || 'Student Account'})</span>
+              </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setAdminModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:brightness-110 text-white text-xs font-bold shadow-lg transition-all"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>+ Record / Edit Attendance</span>
+            </button>
+            <button
+              onClick={() => {
+                clearAdminViewingStudent();
+                navigate('/admin');
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-white/10 transition-all"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Admin Portal</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header Welcome & Quick Copilot Input Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Good morning, {user.name.split(' ')[0]}
+              Good morning, {activeUser.name.split(' ')[0]}
             </h1>
             <span className="text-2xl">⚡</span>
           </div>
           <p className="text-sm text-slate-400 mt-1.5">
-            {user.course} • {user.semester} • 4 classes scheduled today
+            {activeUser.course} • {activeUser.semester} • 4 classes scheduled today
           </p>
         </div>
 
@@ -157,6 +231,22 @@ export default function Dashboard() {
 
       {/* Visual Diagram: Weekly Academic Velocity & Focus Breakdown */}
       <WeeklyWorkloadChart />
+
+      {/* Visual Diagram: Attendance vs 75% Statutory Cutoff Chart */}
+      <AttendanceThresholdChart
+        attendance={activeAttendance}
+        onSelectSubject={(id) => {
+          if (canEditAttendance) {
+            const s = activeAttendance.find(x => x.id === id);
+            if (s) {
+              setEditingSub(s);
+              setEditAttended(s.attended);
+              setEditHeld(s.held);
+              setAdminModalOpen(true);
+            }
+          }
+        }}
+      />
 
       {/* 2-Column Responsive Layout: Left (Daily Digest + Deadlines), Right (Attendance Summary + Copilot Quick Cards) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -308,7 +398,7 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-5">
-              {attendance.map((sub) => {
+              {activeAttendance.map((sub) => {
                 const pct = Math.round((sub.attended / sub.held) * 100);
                 const isCritical = pct < sub.required;
                 const isWarning = pct >= sub.required && pct < sub.required + 5;
@@ -405,8 +495,195 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
+
+          {/* AI Quiz Results Widget */}
+          <div className="p-6 rounded-3xl bg-gradient-to-br from-violet-950/30 via-darkCard to-darkCard border border-violet-500/20 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-violet-400" />
+                <h3 className="text-base font-bold text-white">AI Quiz Results</h3>
+              </div>
+              <button
+                onClick={() => navigate('/notes')}
+                className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 font-semibold"
+              >
+                <span>Take Quiz</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {quizResults && quizResults.length > 0 ? (
+              <div className="space-y-3">
+                {quizResults.slice(0, 4).map((result) => {
+                  const pct = result.percentage;
+                  const color = pct >= 80 ? 'text-emerald-400' : pct >= 60 ? 'text-amber-400' : 'text-rose-400';
+                  const bg = pct >= 80 ? 'bg-emerald-500/10' : pct >= 60 ? 'bg-amber-500/10' : 'bg-rose-500/10';
+                  const border = pct >= 80 ? 'border-emerald-500/20' : pct >= 60 ? 'border-amber-500/20' : 'border-rose-500/20';
+                  return (
+                    <div key={result.id} className={`flex items-center justify-between p-3 rounded-xl ${bg} border ${border}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-slate-200 truncate">{result.docTitle}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{result.completedAt}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <Trophy className={`w-3.5 h-3.5 ${color}`} />
+                        <span className={`text-sm font-bold font-mono ${color}`}>{pct}%</span>
+                        <span className="text-[10px] text-slate-500">{result.score}/{result.total}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4 space-y-2">
+                <Brain className="w-8 h-8 text-slate-700 mx-auto" />
+                <p className="text-xs text-slate-500">No quiz results yet.</p>
+                <button
+                  onClick={() => navigate('/notes')}
+                  className="text-xs text-violet-400 hover:text-violet-300 font-semibold underline"
+                >
+                  Generate an AI quiz from your notes →
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* AI Career GPS & Portfolio Gap Advisor */}
+      <CareerAdvisorWidget />
+
+      {/* Admin Attendance Management Modal */}
+
+      {adminModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-violet-500/30 bg-slate-900 p-6 shadow-2xl text-white">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-violet-400" />
+                <h3 className="text-base font-bold">Admin Attendance Management</h3>
+              </div>
+              <button
+                onClick={() => { setAdminModalOpen(false); setEditingSub(null); }}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 mb-4">
+              Record or overwrite attendance for <strong>{activeUser.name}</strong>. Only administrators can perform this action.
+            </p>
+
+            {editingSub ? (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                await adminSetAttendance(activeUser.id, editingSub.id, Number(editAttended), Number(editHeld), editingSub.required || 75);
+                setEditingSub(null);
+                setAdminModalOpen(false);
+              }} className="space-y-4">
+                <div className="p-3 rounded-2xl bg-slate-800/60 border border-white/5">
+                  <span className="text-[10px] uppercase font-bold text-slate-500">Selected Subject</span>
+                  <p className="text-sm font-bold text-white mt-0.5">{editingSub.name} ({editingSub.code})</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Classes Attended</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editAttended}
+                      onChange={(e) => setEditAttended(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-white text-sm outline-none focus:border-violet-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Classes Held</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editHeld}
+                      onChange={(e) => setEditHeld(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-white text-sm outline-none focus:border-violet-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300 flex items-center justify-between">
+                  <span>Calculated Percentage:</span>
+                  <span className="font-mono font-bold text-sm">
+                    {editHeld > 0 ? Math.round((Number(editAttended) / Number(editHeld)) * 100) : 0}%
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all shadow-lg"
+                  >
+                    Save Attendance Values
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingSub(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  >
+                    Back to List
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                {activeAttendance.map((sub) => (
+                  <div key={sub.id} className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/10 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white truncate">{sub.name}</p>
+                      <p className="text-xs text-slate-400 font-mono">
+                        {sub.attended}/{sub.held} classes • <span className="text-violet-300 font-bold">{Math.round((sub.attended / sub.held) * 100)}%</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={async () => {
+                          await adminUpdateAttendance(activeUser.id, sub.id, 1, 1);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold"
+                        title="Mark Present (+1 attended, +1 held)"
+                      >
+                        + Present
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await adminUpdateAttendance(activeUser.id, sub.id, 0, 1);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold"
+                        title="Mark Absent (+0 attended, +1 held)"
+                      >
+                        + Absent
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingSub(sub);
+                          setEditAttended(sub.attended);
+                          setEditHeld(sub.held);
+                        }}
+                        className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs"
+                        title="Edit exact numbers"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

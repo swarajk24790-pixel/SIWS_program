@@ -11,13 +11,24 @@ import {
   Plus, 
   Minus,
   Sparkles,
-  Info
+  Info,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AttendanceThresholdChart, AttendanceTrendChart } from '../components/VisualCharts';
 
 export default function Attendance() {
-  const { attendance, updateAttendance } = useApp();
+  const { 
+    attendance, 
+    updateAttendance, 
+    isAdmin, 
+    adminViewingStudent, 
+    clearAdminViewingStudent, 
+    adminUpdateAttendance 
+  } = useApp();
+
+  const canEditAttendance = isAdmin || !!adminViewingStudent;
 
   // Selected subject for What-if Calculator
   const [selectedSubjectId, setSelectedSubjectId] = useState(attendance[0]?.id || 'cs301');
@@ -83,14 +94,49 @@ export default function Attendance() {
           </p>
         </div>
 
-        <button
-          onClick={() => setBulkModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-darkCard border border-darkBorder hover:border-indigo-500/50 text-slate-200 hover:text-white text-xs font-semibold transition-all self-start sm:self-auto"
-        >
-          <Calendar className="w-4 h-4 text-indigo-400" />
-          <span>Mark Bulk Attendance</span>
-        </button>
+        {canEditAttendance ? (
+          <button
+            onClick={() => setBulkModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold shadow-lg transition-all self-start sm:self-auto"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Mark Bulk Attendance (Admin)</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-medium self-start sm:self-auto">
+            <Lock className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Student View: View-Only</span>
+          </div>
+        )}
       </div>
+
+      {/* View-Only Student Notice or Admin Active Notice */}
+      {!canEditAttendance ? (
+        <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Lock className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span>
+              <strong>Student View-Only Mode:</strong> Only administrators and faculty can add or record attendance. You can use the What-If Calculator below to model safe absences or recovery targets.
+            </span>
+          </div>
+          <span className="shrink-0 px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold">
+            STATUTORY 75%
+          </span>
+        </div>
+      ) : (
+        <div className="p-3.5 rounded-2xl bg-violet-500/10 border border-violet-500/25 text-xs text-violet-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-violet-400 shrink-0" />
+            <span>
+              <strong>Admin Mode Active:</strong> You have permissions to record present/absent classes and modify attendance for this student.
+            </span>
+          </div>
+          <span className="shrink-0 px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 font-mono text-[10px] font-bold">
+            ADMINISTRATOR
+          </span>
+        </div>
+      )}
+
 
       {/* Visual Diagram: Attendance vs 75% Cutoff Line Chart */}
       <AttendanceThresholdChart
@@ -164,34 +210,41 @@ export default function Attendance() {
                       />
                     </div>
 
-                    {/* Quick Log Buttons */}
+                    {/* Quick Log Buttons (Admin only) or View Status (Student) */}
                     <div className="flex items-center justify-between pt-2 border-t border-darkBorder/50 text-xs">
                       <span className="text-[11px] text-slate-500">
                         {isSelected ? '✓ Loaded in Calculator' : 'Click to load in calculator'}
                       </span>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateAttendance(sub.id, 1, 1);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1 transition-colors"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Present (+1)
-                        </button>
+                      {canEditAttendance ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateAttendance(sub.id, 1, 1);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1 transition-colors"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Present (+1)
+                          </button>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateAttendance(sub.id, 0, 1);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-1 transition-colors"
-                        >
-                          <XCircle className="w-3.5 h-3.5" /> Absent
-                        </button>
-                      </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateAttendance(sub.id, 0, 1);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-1 transition-colors"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> Absent
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500/70" /> View-Only (Admin Managed)
+                        </span>
+                      )}
                     </div>
+
                   </div>
                 );
               })}

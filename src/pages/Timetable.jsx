@@ -60,7 +60,8 @@ export default function Timetable() {
       [newClass.day]: [...dayClasses, { ...newClass, id: Date.now() }]
     };
     if (setTimetable) setTimetable(updated);
-    localStorage.setItem(`unipilot_timetable_${user.id}`, JSON.stringify(updated));
+    const storageKey = user.id === 'local-student' ? 'unipilot_local_timetable' : `unipilot_timetable_${user.id}`;
+    localStorage.setItem(storageKey, JSON.stringify(updated));
     setShowAddClassModal(false);
     setNewClass({ day: 'Monday', time: '09:00 - 10:00 AM', code: '', name: '', room: '', prof: '' });
   };

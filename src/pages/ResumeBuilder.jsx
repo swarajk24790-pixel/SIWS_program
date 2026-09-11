@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
+import CareerAdvisorWidget from '../components/CareerAdvisorWidget';
 
 export default function ResumeBuilder() {
   const { 
@@ -139,8 +140,12 @@ export default function ResumeBuilder() {
         </div>
       </div>
 
+      {/* AI Resume & Career Gap Advisor */}
+      <CareerAdvisorWidget />
+
       {/* Main Grid: Controls Left (4 cols), Live ATS Preview Right (8 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
         {/* Controls Column (4 cols) */}
         <div className="lg:col-span-4 space-y-4">
           <div className="p-5 rounded-3xl bg-darkCard/80 border border-darkBorder space-y-4">

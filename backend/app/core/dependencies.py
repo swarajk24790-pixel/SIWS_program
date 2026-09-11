@@ -28,3 +28,22 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="This account no longer exists.")
 
     return user
+
+
+async def get_optional_current_user(
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    if not authorization or not authorization.startswith('Bearer '):
+        return None
+    try:
+        token = authorization.removeprefix('Bearer ').strip()
+        payload = await verify_token_payload(token)
+        user_id = payload.get('sub') if payload else None
+        if not user_id:
+            return None
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        return result.scalars().first()
+    except Exception:
+        return None

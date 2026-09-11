@@ -127,38 +127,10 @@ async def log_attendance(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(AttendanceSubject).where(
-        AttendanceSubject.id == subject_id,
-        AttendanceSubject.user_id == current_user.id
-    )
-    result = await db.execute(stmt)
-    subject = result.scalars().first()
-    if not subject:
-        raise HTTPException(status_code=404, detail="Subject not found.")
-
-    subject.attended += payload.attended_delta
-    subject.held += payload.held_delta
-    
-    # Audit log
-    status_label = "present" if payload.attended_delta > 0 else "absent"
-    db.add(AttendanceLog(subject_id=subject.id, status=status_label, count=1))
-    
-    await db.commit()
-    await db.refresh(subject)
-
-    pct = round((subject.attended / subject.held * 100), 1) if subject.held > 0 else 0.0
-
-    return AttendanceSubjectOut(
-        id=subject.id,
-        user_id=subject.user_id,
-        name=subject.name,
-        code=subject.code,
-        attended=subject.attended,
-        held=subject.held,
-        required=subject.required,
-        faculty=subject.faculty,
-        percentage=pct,
-        status=compute_status(pct, subject.required)
+    # Only administrators can add or modify student attendance records
+    raise HTTPException(
+        status_code=403,
+        detail="Only administrators or faculty can log student attendance. Students have view-only access."
     )
 
 @router.post("/bulk", response_model=AttendanceSubjectOut)
@@ -167,36 +139,12 @@ async def mark_bulk_attendance(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(AttendanceSubject).where(
-        AttendanceSubject.id == payload.subject_id,
-        AttendanceSubject.user_id == current_user.id
+    # Only administrators can add or modify student attendance records
+    raise HTTPException(
+        status_code=403,
+        detail="Only administrators or faculty can log bulk attendance. Students have view-only access."
     )
-    result = await db.execute(stmt)
-    subject = result.scalars().first()
-    if not subject:
-        raise HTTPException(status_code=404, detail="Subject not found.")
 
-    subject.held += payload.days
-    if payload.status == "present":
-        subject.attended += payload.days
-    
-    db.add(AttendanceLog(subject_id=subject.id, status=f"bulk_{payload.status}", count=payload.days))
-    await db.commit()
-    await db.refresh(subject)
-
-    pct = round((subject.attended / subject.held * 100), 1) if subject.held > 0 else 0.0
-    return AttendanceSubjectOut(
-        id=subject.id,
-        user_id=subject.user_id,
-        name=subject.name,
-        code=subject.code,
-        attended=subject.attended,
-        held=subject.held,
-        required=subject.required,
-        faculty=subject.faculty,
-        percentage=pct,
-        status=compute_status(pct, subject.required)
-    )
 
 @router.post("/calculate-whatif", response_model=WhatIfResponse)
 async def calculate_whatif(

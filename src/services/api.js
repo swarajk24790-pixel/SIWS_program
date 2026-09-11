@@ -154,4 +154,47 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(profileData),
     }),
+
+  // Quiz Generation
+  generateQuizAI: (docTitle, subject, count = 5) =>
+    request('/copilot/notes/quiz', {
+      method: 'POST',
+      body: JSON.stringify({ doc_title: docTitle, subject, count }),
+    }),
+
+  // Admin
+  adminLogin: (secret) =>
+    request('/admin/login', { method: 'POST', body: JSON.stringify({ secret }) }),
+  adminGetStudents: (token) =>
+    request(`/admin/students?admin_token=${encodeURIComponent(token)}`),
+  adminGetStudentDetail: (id, token) =>
+    request(`/admin/students/${id}?admin_token=${encodeURIComponent(token)}`),
+  adminLogAttendance: (studentId, subjectId, attendedDelta, heldDelta, token) =>
+    request(`/admin/students/${studentId}/attendance/log?admin_token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      body: JSON.stringify({ subject_id: subjectId, attended_delta: attendedDelta, held_delta: heldDelta }),
+    }),
+  adminBulkAttendance: (studentId, subjectId, status, days, token) =>
+    request(`/admin/students/${studentId}/attendance/bulk?admin_token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      body: JSON.stringify({ subject_id: subjectId, status, days }),
+    }),
+  adminSetAttendance: (studentId, subjectId, attended, held, required, token) =>
+    request(`/admin/students/${studentId}/attendance/set?admin_token=${encodeURIComponent(token)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ subject_id: subjectId, attended, held, required }),
+    }),
+  adminCreateSubject: (studentId, subject, token) =>
+    request(`/admin/students/${studentId}/attendance/subject?admin_token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      body: JSON.stringify(subject),
+    }),
+
+  // AI Career & Portfolio Growth Advisor
+  getCareerRecommendations: (profile, activities) =>
+    request('/copilot/career/suggest', {
+      method: 'POST',
+      body: JSON.stringify({ profile, activities }),
+    }),
 };
+

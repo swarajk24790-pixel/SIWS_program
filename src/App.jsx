@@ -17,6 +17,7 @@ import ResumeBuilder from './pages/ResumeBuilder';
 import PortfolioGenerator from './pages/PortfolioGenerator';
 import Reminders from './pages/Reminders';
 import ProfileSettings from './pages/ProfileSettings';
+import AdminPanel from './pages/AdminPanel';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useApp();
@@ -32,6 +33,7 @@ function AppRoutes() {
       {/* Public & Onboarding Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/admin" element={<AdminPanel />} />
 
       {/* Authenticated Workspace with MainLayout */}
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>

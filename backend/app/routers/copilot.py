@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.app.core.database import get_db
-from backend.app.core.dependencies import get_current_user
+from backend.app.core.dependencies import get_current_user, get_optional_current_user
 from backend.app.models.user import User
 from backend.app.models.attendance import AttendanceSubject
 from backend.app.schemas.copilot import (
@@ -19,6 +19,8 @@ from backend.app.services.ai_service import (
     summarize_notes,
     generate_flashcards,
     regenerate_bullet,
+    generate_quiz,
+    generate_career_growth_recommendations,
 )
 
 router = APIRouter(prefix="/copilot", tags=["AI Copilot & Academic Solver"])
@@ -54,7 +56,7 @@ class NoteSummarizeRequest(BaseModel):
     subject: str
 
 
-@router.post("/copilot/notes/summarize", response_model=NoteSummarizeResponse)
+@router.post("/notes/summarize", response_model=NoteSummarizeResponse)
 async def summarize_notes_doc(
     payload: NoteSummarizeRequest,
     current_user: User = Depends(get_current_user),
@@ -78,7 +80,7 @@ class FlashcardRequest(BaseModel):
     count: Optional[int] = 5
 
 
-@router.post("/copilot/notes/flashcards", response_model=FlashcardResponse)
+@router.post("/notes/flashcards", response_model=FlashcardResponse)
 async def get_doc_flashcards(
     payload: FlashcardRequest,
     current_user: User = Depends(get_current_user),
@@ -110,3 +112,77 @@ async def rewrite_resume_bullet(
     """AI rewrite of a single resume bullet point for maximum ATS impact."""
     result = await regenerate_bullet(payload.bullet, payload.context)
     return BulletRegenResponse(rewritten=result)
+
+
+# ─── Quiz Generator ───────────────────────────────────────────────────────────
+
+class QuizQuestion(BaseModel):
+    id: int
+    question: str
+    options: list
+    correct: int
+    explanation: str
+
+class QuizRequest(BaseModel):
+    doc_title: str
+    subject: str
+    count: Optional[int] = 5
+
+class QuizResponse(BaseModel):
+    doc_id: str
+    questions: list
+
+@router.post("/notes/quiz")
+async def generate_notes_quiz(
+    payload: QuizRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """AI-generated MCQ quiz from document topic for practice and assessment."""
+    questions = await generate_quiz(payload.doc_title, payload.subject, payload.count or 5)
+    return {"doc_id": payload.doc_title, "questions": questions}
+
+
+
+# ─── Career & Profile Growth AI Advisor ───────────────────────────────────────
+
+class CareerGrowthRequest(BaseModel):
+    profile: Optional[dict] = None
+    activities: Optional[list] = None
+
+@router.post("/career/suggest")
+async def suggest_career_growth(
+    payload: CareerGrowthRequest,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Analyze student achievements and suggest internships, capstone projects, and courses."""
+    # Use passed profile or current_user
+    if payload.profile:
+        user_dict = payload.profile
+    elif current_user:
+        user_dict = {
+            "name": current_user.name,
+            "email": current_user.email,
+            "college": current_user.college,
+            "course": current_user.course,
+            "semester": current_user.semester,
+            "gpa": str(current_user.cgpa or 8.0),
+        }
+    else:
+        user_dict = {"name": "Guest Student", "course": "General"}
+
+    # Fetch activities from DB if not provided
+    activities_list = payload.activities
+    if activities_list is None and current_user:
+        from backend.app.models.activity import ActivityItem
+        stmt = select(ActivityItem).where(ActivityItem.user_id == current_user.id)
+        acts = (await db.execute(stmt)).scalars().all()
+        activities_list = [
+            {"id": a.id, "title": a.title, "type": a.type, "subtitle": a.subtitle, "date": a.date}
+            for a in acts
+        ]
+    elif activities_list is None:
+        activities_list = []
+
+    result = await generate_career_growth_recommendations(user_dict, activities_list)
+    return result

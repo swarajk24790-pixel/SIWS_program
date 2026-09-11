@@ -265,3 +265,248 @@ async def generate_activity_bullets(title: str, activity_type: str, description:
             "Applied technical engineering principles to deliver measurable project outcomes.",
             "Collaborated with cross-functional teams to implement structured milestone deliverables.",
         ]
+
+
+QUIZ_SYSTEM = """\
+You are an expert academic quiz generator. Given a document title and subject,
+generate exactly {count} multiple-choice questions at exam difficulty level.
+Format your output EXACTLY as a JSON array:
+[
+  {{
+    "id": 1,
+    "question": "specific question text",
+    "options": ["option A", "option B", "option C", "option D"],
+    "correct": 0,
+    "explanation": "brief explanation of why this answer is correct"
+  }}
+]
+- "correct" is the zero-based index of the correct option in the "options" array
+- Make questions specific, testable, and at undergraduate exam level
+- Ensure all 4 options are plausible (no obviously wrong distractors)
+- Return ONLY the JSON array, no markdown outside it.
+"""
+
+async def generate_quiz(doc_title: str, subject: str, count: int = 5) -> List[Dict]:
+    """Generate MCQ quiz questions for a given document topic."""
+    system = QUIZ_SYSTEM.format(count=count)
+    prompt = f'Document: "{doc_title}"\nSubject: {subject}\n\nGenerate {count} quiz questions JSON array.'
+
+    raw = await ask_ai(
+        system_prompt=system,
+        user_prompt=prompt,
+        max_tokens=1500,
+        temperature=0.5,
+    )
+
+    try:
+        clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        questions = json.loads(clean)
+        return [
+            {
+                "id": i + 1,
+                "question": q.get("question", f"Question {i+1}"),
+                "options": q.get("options", ["A", "B", "C", "D"]),
+                "correct": q.get("correct", 0),
+                "explanation": q.get("explanation", "")
+            }
+            for i, q in enumerate(questions)
+        ]
+    except Exception:
+        return [{
+            "id": 1,
+            "question": f"What is the main concept covered in {doc_title}?",
+            "options": [
+                "The primary theoretical framework",
+                "Implementation details",
+                "Historical context",
+                "Mathematical derivations"
+            ],
+            "correct": 0,
+            "explanation": "AI generation failed — please try again."
+        }]
+
+
+
+CAREER_GROWTH_SYSTEM = """\
+You are an Elite Silicon Valley Tech Recruiter and Academic Career Coach.
+Given an engineering student's profile, GPA, course, and their list of currently logged activities (internships, projects, hackathons, courses), analyze their Resume & Portfolio gaps.
+Return ONLY a valid JSON object matching this structure:
+{
+  "readiness_score": 75,
+  "profile_tier": "Competitive Undergrad",
+  "strengths": ["Solid algorithmic foundations", "Hands-on academic projects"],
+  "top_missing_skills": ["Production Cloud CI/CD", "Distributed Caching (Redis/Kafka)", "Container Orchestration"],
+  "recommended_internships": [
+    {
+      "role": "Cloud Infrastructure & Backend Engineering Intern",
+      "target_companies": "Series A-C Tech Startups, High-Frequency Trading, Cloud Hyperscalers",
+      "impact": "Bridges the gap between classroom theory and multi-tenant production systems.",
+      "skills_to_highlight": ["Go/Rust or Python FastAPI", "Docker", "PostgreSQL tuning"]
+    },
+    {
+      "role": "Applied AI / Machine Learning Systems Intern",
+      "target_companies": "AI Research Labs, Enterprise GenAI Startups",
+      "impact": "Validates your machine learning coursework with real-world model deployment and evaluation.",
+      "skills_to_highlight": ["PyTorch", "vLLM", "Vector Databases", "Prompt Engineering"]
+    }
+  ],
+  "recommended_projects": [
+    {
+      "title": "High-Throughput Distributed Cache with Consistent Hashing",
+      "category": "Systems & Cloud",
+      "tech_stack": "Go or Rust, gRPC, Docker, Prometheus",
+      "why_valuable": "Demonstrates deep understanding of network partitioning, replication, and telemetry.",
+      "estimated_hours": 30,
+      "difficulty": "Advanced"
+    },
+    {
+      "title": "RAG-Powered Code Search Engine over Large Repositories",
+      "category": "GenAI & IR",
+      "tech_stack": "Python, Qdrant/Milvus, Tree-sitter, FastAPI, React",
+      "why_valuable": "Shows recruiters you can architect modern semantic search pipelines beyond toy prototypes.",
+      "estimated_hours": 25,
+      "difficulty": "Intermediate"
+    }
+  ],
+  "recommended_courses": [
+    {
+      "title": "AWS Certified Solutions Architect – Associate (SAA-C03)",
+      "platform": "AWS Skill Builder / Coursera",
+      "focus": "Cloud Architecture, High-Availability Systems, Security",
+      "duration": "4 weeks"
+    },
+    {
+      "title": "Distributed Systems Engineering (MIT 6.824 / Stanford CS244B)",
+      "platform": "OpenCourseWare / YouTube",
+      "focus": "Raft, Paxos, MapReduce, Spanner",
+      "duration": "6 weeks"
+    }
+  ],
+  "recommended_hackathons": [
+    {
+      "name": "ETHIndia / ETHGlobal Web3 & Infra Hackathon",
+      "focus": "Decentralized compute, smart contracts, zero-knowledge proofs",
+      "timeline": "Next Quarter"
+    },
+    {
+      "name": "Smart India Hackathon (SIH) – Software Edition",
+      "focus": "National scale citizen-facing infrastructure and analytics",
+      "timeline": "Annual"
+    }
+  ],
+  "career_roadmap_summary": "Your portfolio shows strong core fundamentals. Adding one production distributed project and a targeted backend internship will push your resume into the top 5% of applicants."
+}
+No explanation, no markdown outside the JSON block.
+"""
+
+async def generate_career_growth_recommendations(profile: dict, activities: list) -> dict:
+    """Analyze student portfolio & resume gaps and generate AI suggestions."""
+    internships_count = sum(1 for a in activities if a.get("type") == "internship")
+    projects_count = sum(1 for a in activities if a.get("type") == "project")
+    hackathons_count = sum(1 for a in activities if a.get("type") == "hackathon")
+    courses_count = sum(1 for a in activities if a.get("type") == "course")
+
+    titles = [a.get("title", "") for a in activities]
+    activity_summary = ", ".join(titles[:10]) if titles else "No external activities logged yet"
+
+    user_prompt = (
+        f"Student Profile:\n"
+        f"Name: {profile.get('name', 'Student')}\n"
+        f"Course: {profile.get('course', 'Computer Science & Engineering')}\n"
+        f"Semester: {profile.get('semester', 'Semester 1')}\n"
+        f"CGPA: {profile.get('gpa', '8.0')}\n"
+        f"Current Stats: {internships_count} Internships, {projects_count} Projects, {hackathons_count} Hackathons, {courses_count} Courses\n"
+        f"Logged Activities: {activity_summary}\n\n"
+        f"Generate complete career growth recommendation JSON."
+    )
+
+    raw = await ask_ai(
+        system_prompt=CAREER_GROWTH_SYSTEM,
+        user_prompt=user_prompt,
+        max_tokens=1800,
+        temperature=0.6,
+    )
+
+    try:
+        clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        data = json.loads(clean)
+        if "readiness_score" in data and "recommended_projects" in data:
+            return data
+    except Exception as e:
+        print(f"[ai_service] Failed to parse career growth AI output: {e}")
+
+    # High-quality contextual fallback
+    readiness = min(92, max(58, 60 + projects_count * 5 + internships_count * 12 + hackathons_count * 4))
+    return {
+        "readiness_score": readiness,
+        "profile_tier": "Emerging Tech Leader" if readiness > 75 else "Foundational Engineer",
+        "strengths": [
+            "Academic coursework aligned with core CS systems",
+            f"{projects_count} verified projects and portfolio artifacts synced",
+            "Strong motivation demonstrated through active tracking"
+        ],
+        "top_missing_skills": [
+            "Production Cloud Deployment (AWS / GCP / Docker)",
+            "Distributed Event Streaming (Kafka / RabbitMQ)",
+            "System Observability & Monitoring (Prometheus / Grafana)"
+        ],
+        "recommended_internships": [
+            {
+                "role": "Cloud Infrastructure & Systems Backend Intern",
+                "target_companies": "Fast-growing B2B SaaS, Cloud infrastructure providers, Series B startups",
+                "impact": "Translates your coursework into scalable multi-tenant services with automated CI/CD.",
+                "skills_to_highlight": ["FastAPI / Go", "Docker & Kubernetes", "PostgreSQL schema design"]
+            },
+            {
+                "role": "Full-Stack AI Engineering Intern",
+                "target_companies": "Applied GenAI companies, Enterprise Developer Tools",
+                "impact": "Validates your front-to-back engineering capabilities with real model integration.",
+                "skills_to_highlight": ["Next.js / React", "LangChain / LlamaIndex", "Vector Search"]
+            }
+        ],
+        "recommended_projects": [
+            {
+                "title": "Distributed Key-Value Store with Raft Consensus",
+                "category": "Distributed Systems",
+                "tech_stack": "Go, Raft Protocol, gRPC, Docker, Prometheus",
+                "why_valuable": "Demonstrates leader election, log compaction, and network partition resilience to top recruiters.",
+                "estimated_hours": 30,
+                "difficulty": "Advanced"
+            },
+            {
+                "title": "Real-Time Collaborative Code Playground with WebSockets & CRDTs",
+                "category": "Full-Stack Systems",
+                "tech_stack": "React, Node.js / Go, Yjs (CRDTs), WebSockets, Docker sandbox",
+                "why_valuable": "Demonstrates operational concurrency, low-latency data sync, and secure code sandboxing.",
+                "estimated_hours": 25,
+                "difficulty": "Intermediate"
+            }
+        ],
+        "recommended_courses": [
+            {
+                "title": "AWS Certified Solutions Architect – Associate",
+                "platform": "AWS Skill Builder & Udemy",
+                "focus": "Cloud Architecture, VPC Subnetting, High Availability, IAM",
+                "duration": "4 weeks"
+            },
+            {
+                "title": "Stanford CS149: Parallel Computing & GPU Programming",
+                "platform": "Stanford Online / OpenCourseWare",
+                "focus": "CUDA, SIMD Vectorization, Multi-threading, Cache Locality",
+                "duration": "6 weeks"
+            }
+        ],
+        "recommended_hackathons": [
+            {
+                "name": "Smart India Hackathon (SIH) / National Innovation Challenge",
+                "focus": "Large-scale public digital infrastructure",
+                "timeline": "Upcoming Season"
+            },
+            {
+                "name": "MLH Global Hackathon League / ETHIndia",
+                "focus": "Autonomous agents, decentralized infrastructure, developer tooling",
+                "timeline": "Rolling Weekends"
+            }
+        ],
+        "career_roadmap_summary": "Your portfolio has great momentum. Building a high-throughput systems project and securing one production backend internship will position your resume in the top percentile of campus placements."
+    }

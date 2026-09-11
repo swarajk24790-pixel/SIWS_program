@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+﻿from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
@@ -13,7 +13,8 @@ from backend.app.routers import (
     importer,
     copilot,
     resume,
-    planner
+    planner,
+    admin
 )
 
 @asynccontextmanager
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="High-performance autonomous backend for UniPilot — Smart Attendance, Unified Activity Feed, Certificate/GitHub Importers, and Living Career Profile.",
+    description="High-performance autonomous backend for UniPilot â€” Smart Attendance, Unified Activity Feed, Certificate/GitHub Importers, and Living Career Profile.",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
@@ -51,6 +52,7 @@ app.include_router(importer.router, prefix=settings.API_V1_STR)
 app.include_router(copilot.router, prefix=settings.API_V1_STR)
 app.include_router(resume.router, prefix=settings.API_V1_STR)
 app.include_router(planner.router, prefix=settings.API_V1_STR)
+app.include_router(admin.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
@@ -69,3 +71,4 @@ async def health_check():
         "database": "sqlite+aiosqlite",
         "auth_mode": "Local JWT with SQLite user storage"
     }
+
