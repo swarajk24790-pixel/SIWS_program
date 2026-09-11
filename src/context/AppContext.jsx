@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
+import defaultProfile from '../assets/default-profile.webp';
 
 const AppContext = createContext();
 
@@ -28,7 +29,7 @@ function toClientUser(profile) {
     semester: profile.semester || 'Semester 1',
     gpa: `${profile.cgpa ?? 8.0} CGPA`, github: profile.github || '', linkedin: profile.linkedin || '',
     tagline: `${profile.course || 'Computer Science'} â€¢ ${profile.college || 'University Campus'}`,
-    avatar: profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+    avatar: profile.avatar || defaultProfile
   };
 }
 
@@ -128,7 +129,7 @@ export function AppProvider({ children }) {
       github: '',
       linkedin: '',
       email: 'student@university.edu',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+      avatar: defaultProfile
     };
   });
 
@@ -171,7 +172,7 @@ export function AppProvider({ children }) {
       github: '',
       linkedin: '',
       tagline: `${profile.course} â€¢ ${profile.college}`,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+      avatar: defaultProfile
     };
     localStorage.setItem('unipilot_local_mode', 'student');
     localStorage.setItem('unipilot_local_user', JSON.stringify(localUser));
@@ -200,8 +201,9 @@ export function AppProvider({ children }) {
       gpa: '8.00 / 10.0',
       github: '',
       linkedin: '',
+      instagram: '',
       email: 'student@university.edu',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+      avatar: defaultProfile
     });
     setAttendance([]);
     setActivities([]);
