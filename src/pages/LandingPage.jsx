@@ -215,6 +215,7 @@ export default function LandingPage() {
 
             {/* Social Auth Option */}
             <button
+              type="button"
               onClick={() => {
                 enterAsGuest(name.trim() || 'Student User');
                 if (authModal === 'signup') navigate('/onboarding');

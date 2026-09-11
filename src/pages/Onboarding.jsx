@@ -60,7 +60,7 @@ export default function Onboarding() {
           github: githubUser
         };
         setUser(updatedUser);
-        localStorage.setItem('unipilot_user', JSON.stringify(updatedUser));
+        localStorage.setItem(`unipilot_user_${user.id}`, JSON.stringify(updatedUser));
 
         // Update backend profile if logged in
         await api.updateProfile({
@@ -88,7 +88,7 @@ export default function Onboarding() {
         });
 
         setTimetable(dynamicSchedule);
-        localStorage.setItem('unipilot_timetable', JSON.stringify(dynamicSchedule));
+        localStorage.setItem(`unipilot_timetable_${user.id}`, JSON.stringify(dynamicSchedule));
 
         // Persist subjects to backend attendance
         for (const sub of subjects) {

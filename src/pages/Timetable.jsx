@@ -16,7 +16,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 export default function Timetable() {
-  const { assignments, toggleAssignmentStatus, timetable, setTimetable, attendance } = useApp();
+  const { assignments, toggleAssignmentStatus, timetable, setTimetable, attendance, user } = useApp();
   const [activeTab, setActiveTab] = useState('timetable'); // 'timetable' | 'assignments'
   const [activeDay, setActiveDay] = useState('Monday');
   const [showAddClassModal, setShowAddClassModal] = useState(false);
@@ -60,7 +60,7 @@ export default function Timetable() {
       [newClass.day]: [...dayClasses, { ...newClass, id: Date.now() }]
     };
     if (setTimetable) setTimetable(updated);
-    localStorage.setItem('unipilot_timetable', JSON.stringify(updated));
+    localStorage.setItem(`unipilot_timetable_${user.id}`, JSON.stringify(updated));
     setShowAddClassModal(false);
     setNewClass({ day: 'Monday', time: '09:00 - 10:00 AM', code: '', name: '', room: '', prof: '' });
   };

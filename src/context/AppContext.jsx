@@ -3,6 +3,22 @@ import { api } from '../services/api';
 
 const AppContext = createContext();
 
+const EMPTY_TIMETABLE = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
+const userStorageKey = (id) => `unipilot_user_${id}`;
+const timetableStorageKey = (id) => `unipilot_timetable_${id}`;
+
+function toClientUser(profile) {
+  return {
+    id: profile.id, name: profile.name, email: profile.email,
+    college: profile.college || 'University Campus',
+    course: profile.course || 'Computer Science & Engineering',
+    semester: profile.semester || 'Semester 1',
+    gpa: `${profile.cgpa ?? 8.0} CGPA`, github: profile.github || '', linkedin: profile.linkedin || '',
+    tagline: `${profile.course || 'Computer Science'} • ${profile.college || 'University Campus'}`,
+    avatar: profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+  };
+}
+
 export function AppProvider({ children }) {
   const [activities, setActivities] = useState([]);
   const [attendance, setAttendance] = useState([]);
@@ -14,6 +30,7 @@ export function AppProvider({ children }) {
   const [compiledResume, setCompiledResume] = useState(null);
   const [compiledPortfolio, setCompiledPortfolio] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Keep a saved session available while /auth/me verifies it on application startup.
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('unipilot_token'));
 
   const [notifications, setNotifications] = useState([
@@ -24,7 +41,8 @@ export function AppProvider({ children }) {
 
   // Stored active user or fallback template
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('unipilot_user');
+    const activeUserId = localStorage.getItem('unipilot_active_user_id');
+    const saved = activeUserId && localStorage.getItem(userStorageKey(activeUserId));
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
@@ -44,7 +62,8 @@ export function AppProvider({ children }) {
 
   // Timetable state stored dynamically per user
   const [timetable, setTimetable] = useState(() => {
-    const saved = localStorage.getItem('unipilot_timetable');
+    const activeUserId = localStorage.getItem('unipilot_active_user_id');
+    const saved = activeUserId && localStorage.getItem(timetableStorageKey(activeUserId));
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
@@ -64,8 +83,9 @@ export function AppProvider({ children }) {
       const token = localStorage.getItem('unipilot_token');
       if (token) {
         const profile = await api.getProfile().catch(() => null);
-        if (profile && profile.name) {
+        if (profile && profile.id) {
           const u = {
+            id: profile.id,
             name: profile.name,
             email: profile.email,
             college: profile.college || 'University Campus',
@@ -78,7 +98,16 @@ export function AppProvider({ children }) {
             avatar: profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
           };
           setUser(u);
-          localStorage.setItem('unipilot_user', JSON.stringify(u));
+          localStorage.setItem('unipilot_active_user_id', profile.id);
+          localStorage.setItem(userStorageKey(profile.id), JSON.stringify(u));
+          const savedTimetable = localStorage.getItem(timetableStorageKey(profile.id));
+          setTimetable(savedTimetable ? JSON.parse(savedTimetable) : EMPTY_TIMETABLE);
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('unipilot_token');
+          localStorage.removeItem('unipilot_active_user_id');
+          setIsAuthenticated(false);
+          return;
         }
       }
 
@@ -111,7 +140,8 @@ export function AppProvider({ children }) {
   };
 
   useEffect(() => {
-    loadUserData();
+    if (localStorage.getItem('unipilot_token')) loadUserData();
+    else setIsLoading(false);
   }, []);
 
   const loginUser = async (email, password) => {
@@ -121,6 +151,7 @@ export function AppProvider({ children }) {
       setIsAuthenticated(true);
       if (res.user) {
         const u = {
+          id: res.user.id,
           name: res.user.name,
           email: res.user.email,
           college: res.user.college || 'University Campus',
@@ -132,7 +163,8 @@ export function AppProvider({ children }) {
           avatar: res.user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
         };
         setUser(u);
-        localStorage.setItem('unipilot_user', JSON.stringify(u));
+        localStorage.setItem('unipilot_active_user_id', res.user.id);
+        localStorage.setItem(userStorageKey(res.user.id), JSON.stringify(u));
       }
       await loadUserData();
       return res;
@@ -147,23 +179,21 @@ export function AppProvider({ children }) {
       setIsAuthenticated(true);
       if (res.user) {
         const u = {
+          id: res.user.id,
           name: res.user.name,
           email: res.user.email,
           college: res.user.college || 'University Campus',
           course: res.user.course || 'Computer Science & Engineering',
           semester: res.user.semester || 'Semester 1',
           gpa: `${res.user.cgpa || 8.0} CGPA`,
-          github: '',
-          linkedin: '',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
+          github: res.user.github || '',
+          linkedin: res.user.linkedin || '',
+          avatar: res.user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
         };
         setUser(u);
-        localStorage.setItem('unipilot_user', JSON.stringify(u));
+        localStorage.setItem('unipilot_active_user_id', res.user.id);
+        localStorage.setItem(userStorageKey(res.user.id), JSON.stringify(u));
       }
-      // Reset timetable & attendance for new registered user
-      setAttendance([]);
-      setTimetable({ Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] });
-      localStorage.removeItem('unipilot_timetable');
       await loadUserData();
       return res;
     }
@@ -193,8 +223,7 @@ export function AppProvider({ children }) {
 
   const logoutUser = () => {
     localStorage.removeItem('unipilot_token');
-    localStorage.removeItem('unipilot_user');
-    localStorage.removeItem('unipilot_timetable');
+    localStorage.removeItem('unipilot_active_user_id');
     setIsAuthenticated(false);
     setUser({
       name: 'Guest Student',

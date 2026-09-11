@@ -132,8 +132,12 @@ export default function NotesSolver() {
   const handleGenerateSummaryAI = async () => {
     setIsLoadingSummary(true);
     try {
-      const res = await api.summarizeNotesAI(activeDoc.title, activeDoc.subject);
-      setDocSummaries(prev => ({ ...prev, [selectedDocId]: res }));
+      const res = await api.chat(`Summarize: ${activeDoc.title} about ${activeDoc.subject}`, []);
+      setDocSummaries(prev => ({ ...prev, [selectedDocId]: {
+        summary: res.reply || res || '',
+        key_takeaways: res.suggested_actions || [],
+        formulas: []
+      } }));
     } catch (err) {
       console.warn('[NotesSolver] AI summary failed, using default:', err);
     } finally {
@@ -144,15 +148,15 @@ export default function NotesSolver() {
   const handleGenerateCardsAI = async () => {
     setIsLoadingCards(true);
     try {
-      const res = await api.getFlashcardsAI(activeDoc.title, activeDoc.subject, 4);
-      if (res && res.flashcards && res.flashcards.length > 0) {
-        const formatted = res.flashcards.map((c, i) => ({
-          id: i + 1,
-          front: c.question,
-          back: c.answer
-        }));
-        setDocCards(prev => ({ ...prev, [selectedDocId]: formatted }));
-      }
+      const res = await api.chat(`Generate flashcards: ${activeDoc.title} about ${activeDoc.subject}`, []);
+      const flashcardsText = res.reply || res || '';
+      const flashcards = flashcardsText.split('\n\n').filter(f => f.trim()).slice(0, 4).map((f, i) => {
+        const lines = f.split('\n');
+        const front = lines[0] || `Flashcard ${i + 1}`;
+        const back = lines[1] || 'No answer available';
+        return { id: i + 1, front, back };
+      });
+      setDocCards(prev => ({ ...prev, [selectedDocId]: flashcards }));
     } catch (err) {
       console.warn('[NotesSolver] AI flashcards failed, using default:', err);
     } finally {
@@ -248,6 +252,24 @@ export default function NotesSolver() {
 
         {/* Right Study Station (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
+          {!activeDoc ? (
+            <div className="p-10 rounded-3xl bg-darkCard/80 border border-darkBorder shadow-xl text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mx-auto">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white">No document selected</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Upload your notes or slides using the button above to generate summaries, flashcards, and practice quizzes.
+              </p>
+              <button
+                onClick={triggerFileInput}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-glow-primary transition-all"
+              >
+                Upload Notes / Deck
+              </button>
+            </div>
+          ) : (
+          <>
           {/* Active Document Header & Tool Bar */}
           <div className="p-5 rounded-3xl bg-darkCard/80 border border-darkBorder shadow-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-darkBorder/70">
@@ -514,6 +536,8 @@ export default function NotesSolver() {
                 </div>
               )}
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

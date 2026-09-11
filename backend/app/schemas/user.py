@@ -24,11 +24,13 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
+    email: Optional[EmailStr] = None
     college: Optional[str] = None
     course: Optional[str] = None
     semester: Optional[str] = None
     cgpa: Optional[float] = None
     target_attendance: Optional[float] = None
+    avatar: Optional[str] = None
     github: Optional[str] = None
     linkedin: Optional[str] = None
 

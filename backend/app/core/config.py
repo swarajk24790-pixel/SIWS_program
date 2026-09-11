@@ -30,6 +30,8 @@ class Settings(BaseSettings):
 
     class Config:
         case_sensitive = True
+        extra = "ignore"
+        # Look for .env at project root
         env_file = str(_PROJECT_ROOT / ".env")
         env_file_encoding = "utf-8"
 

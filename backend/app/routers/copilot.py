@@ -54,11 +54,11 @@ class NoteSummarizeRequest(BaseModel):
     subject: str
 
 
-@router.post("/notes/summarize", response_model=NoteSummarizeResponse)
+@router.post("/copilot/notes/summarize", response_model=NoteSummarizeResponse)
 async def summarize_notes_doc(
     payload: NoteSummarizeRequest,
     current_user: User = Depends(get_current_user),
-):
+) -> NoteSummarizeResponse:
     """AI-powered note summarizer — generates structured summary from doc title & subject."""
     data = await summarize_notes(payload.doc_title, payload.subject)
     return NoteSummarizeResponse(
@@ -78,11 +78,11 @@ class FlashcardRequest(BaseModel):
     count: Optional[int] = 5
 
 
-@router.post("/notes/flashcards", response_model=FlashcardResponse)
+@router.post("/copilot/notes/flashcards", response_model=FlashcardResponse)
 async def get_doc_flashcards(
     payload: FlashcardRequest,
     current_user: User = Depends(get_current_user),
-):
+) -> FlashcardResponse:
     """AI-powered flashcard generator — creates exam-ready Q&A cards from a topic."""
     cards = await generate_flashcards(payload.doc_title, payload.subject, payload.count or 5)
     return FlashcardResponse(

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Github, Linkedin } from '../components/Icons';
 import { useApp } from '../context/AppContext';
+import { api } from '../services/api';
 
 export default function ProfileSettings() {
   const navigate = useNavigate();
@@ -30,11 +31,26 @@ export default function ProfileSettings() {
     weeklyDigest: false
   });
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setUser({ ...formData });
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2000);
+    try {
+      const saved = await api.updateProfile({
+        name: formData.name,
+        college: formData.college,
+        course: formData.course,
+        semester: formData.semester,
+        github: formData.github,
+        linkedin: formData.linkedin,
+        avatar: formData.avatar,
+      });
+      const updated = { ...formData, id: saved.id, email: saved.email };
+      setUser(updated);
+      localStorage.setItem(`unipilot_user_${saved.id}`, JSON.stringify(updated));
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (error) {
+      console.warn('Could not save profile:', error);
+    }
   };
 
   const handleExportData = () => {
