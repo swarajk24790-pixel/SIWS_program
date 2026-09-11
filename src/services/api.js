@@ -6,7 +6,7 @@
 
 // During development Vite proxies this path to FastAPI. Keeping the request
 // same-origin prevents browser CORS/network failures on localhost or LAN URLs.
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -21,12 +21,15 @@ async function request(endpoint, options = {}) {
   try {
     const res = await fetch(url, { ...options, headers });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Network request failed' }));
+      const err = await res.json().catch(() => ({ detail: `Server returned ${res.status}. Please try again shortly.` }));
       throw new Error(err.detail || `HTTP ${res.status}`);
     }
     return await res.json();
   } catch (error) {
     console.warn(`[UniPilot API] Request to ${endpoint} failed, falling back:`, error.message);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Cannot reach the UniPilot server. Please refresh and try again.');
+    }
     throw error;
   }
 }
