@@ -4,7 +4,9 @@
  * Falls back gracefully to optimistic updates if the backend is temporarily offline.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+// During development Vite proxies this path to FastAPI. Keeping the request
+// same-origin prevents browser CORS/network failures on localhost or LAN URLs.
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
