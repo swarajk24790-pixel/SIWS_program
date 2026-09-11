@@ -200,27 +200,6 @@ export function AppProvider({ children }) {
     throw new Error('Registration failed');
   };
 
-  const enterAsGuest = (guestName = 'Guest Student') => {
-    const dummyToken = 'guest_token_' + Date.now();
-    localStorage.setItem('unipilot_token', dummyToken);
-    const guestUser = {
-      name: guestName,
-      tagline: 'Undergrad • Engineering & Applied Science',
-      college: 'SIWS College of Science & Technology',
-      course: 'Computer Science & Engineering',
-      semester: 'Semester 1',
-      gpa: '8.50 / 10.0',
-      github: '',
-      linkedin: '',
-      email: 'student@siws.edu',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'
-    };
-    setUser(guestUser);
-    localStorage.setItem('unipilot_user', JSON.stringify(guestUser));
-    setIsAuthenticated(true);
-    return guestUser;
-  };
-
   const logoutUser = () => {
     localStorage.removeItem('unipilot_token');
     localStorage.removeItem('unipilot_active_user_id');
@@ -340,7 +319,6 @@ export function AppProvider({ children }) {
       setUser,
       loginUser,
       registerUser,
-      enterAsGuest,
       logoutUser,
       timetable,
       setTimetable,

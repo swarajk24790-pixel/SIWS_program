@@ -20,7 +20,7 @@ import { useApp } from '../context/AppContext';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { loginUser, registerUser, enterAsGuest } = useApp();
+  const { loginUser, registerUser } = useApp();
   const [authModal, setAuthModal] = useState(null); // 'login' | 'signup' | null
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,15 +42,8 @@ export default function LandingPage() {
         navigate('/dashboard');
       }
     } catch (err) {
-      console.warn('Backend unavailable, falling back to local session:', err);
-      // Seamless fallback: If backend server is not running, log in locally with entered details
-      const studentName = name.trim() || email.split('@')[0].replace('.', ' ').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Student User';
-      enterAsGuest(studentName);
-      if (authModal === 'signup') {
-        navigate('/onboarding');
-      } else {
-        navigate('/dashboard');
-      }
+      console.warn('Authentication failed:', err);
+      setAuthError(err.message || 'Authentication failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -124,10 +117,7 @@ export default function LandingPage() {
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
-            onClick={() => {
-              enterAsGuest();
-              navigate('/dashboard');
-            }}
+            onClick={() => setAuthModal('signup')}
             className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-darkCard/80 border border-darkBorder hover:bg-darkCardHover text-slate-200 font-semibold text-sm transition-all"
           >
             Explore Interactive Demo
@@ -216,11 +206,7 @@ export default function LandingPage() {
             {/* Social Auth Option */}
             <button
               type="button"
-              onClick={() => {
-                enterAsGuest(name.trim() || 'Student User');
-                if (authModal === 'signup') navigate('/onboarding');
-                else navigate('/dashboard');
-              }}
+              onClick={() => setAuthError('Google sign-in is not configured. Please use your email and password.')}
               className="w-full py-2.5 px-4 rounded-xl bg-darkBg border border-darkBorder hover:bg-slate-800 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-colors mb-4"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
