@@ -75,6 +75,12 @@ export default function LandingPage() {
 
         <div className="flex items-center gap-3 sm:gap-4">
           <button
+            onClick={() => navigate('/login')}
+            className="text-xs sm:text-sm font-semibold text-slate-300 hover:text-white px-3 py-2 transition-colors border border-darkBorder hover:border-slate-600 rounded-xl bg-darkCard/50"
+          >
+            Portal Login (Student / Parent)
+          </button>
+          <button
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-500 hover:from-indigo-500 hover:to-sky-400 text-white font-semibold text-xs sm:text-sm shadow-glow-primary transition-all active:scale-95"
           >

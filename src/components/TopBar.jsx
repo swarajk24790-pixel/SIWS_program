@@ -8,7 +8,9 @@ import {
   RefreshCw, 
   Check, 
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  Users,
+  GraduationCap
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -20,31 +22,100 @@ export default function TopBar() {
     markAllNotificationsRead, 
     hasNewActivityForResume, 
     regenerateResume, 
-    setQuickAddOpen 
+    setQuickAddOpen,
+    portalRole,
+    SAMPLE_STUDENTS,
+    selectStudent
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-darkCard/80 backdrop-blur-xl border-b border-darkBorder/80 px-4 lg:px-8 flex items-center justify-between gap-4">
-      {/* Search / Copilot Input trigger */}
-      <div className="flex items-center gap-3 flex-1 max-w-md">
-        <div 
-          onClick={() => navigate('/chat')}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-darkBg/80 border border-darkBorder/80 text-xs text-slate-400 cursor-pointer hover:border-indigo-500/50 hover:bg-darkBg transition-all group shadow-inner"
-        >
-          <Sparkles className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
-          <span className="truncate">Ask UniPilot anything... (e.g. &ldquo;Can I bunk today?&rdquo;)</span>
-          <kbd className="hidden sm:inline-block ml-auto text-[10px] bg-slate-800/80 px-1.5 py-0.5 rounded text-slate-400 font-mono border border-slate-700">
-            ⌘K
-          </kbd>
-        </div>
+      {/* Search / Copilot Input trigger or Student Switcher */}
+      <div className="flex items-center gap-3 flex-1 max-w-lg">
+        {/* Parent / Teacher Mode Student Switcher */}
+        {portalRole === 'guardian' ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowStudentDropdown(!showStudentDropdown)}
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-200 text-xs font-semibold hover:bg-purple-500/20 transition-all"
+            >
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-[11px] text-purple-300">Viewing Child / Student:</span>
+              <span className="font-bold text-white underline decoration-purple-400">{user.name}</span>
+              <ChevronDown className="w-3 h-3 text-purple-400" />
+            </button>
+
+            {showStudentDropdown && (
+              <div 
+                className="absolute left-0 mt-2 w-72 rounded-2xl bg-darkCard border border-darkBorder shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                onClick={() => setShowStudentDropdown(false)}
+              >
+                <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-darkBorder">
+                  Switch Student / Ward
+                </div>
+                <div className="space-y-1 mt-1 max-h-56 overflow-y-auto">
+                  {SAMPLE_STUDENTS.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => selectStudent(s.id)}
+                      className={`w-full text-left p-2 rounded-xl flex items-center gap-2.5 transition-colors ${
+                        user.id === s.id ? 'bg-purple-600/30 text-white font-bold' : 'hover:bg-darkBg text-slate-300'
+                      }`}
+                    >
+                      <img src={s.avatar} alt={s.name} className="w-6 h-6 rounded-full object-cover" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs truncate">{s.name}</p>
+                        <p className="text-[10px] text-slate-400">{s.course}</p>
+                      </div>
+                      <span className={`text-[10px] font-bold ${s.attendancePct >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {s.attendancePct}%
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div 
+            onClick={() => navigate('/chat')}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-darkBg/80 border border-darkBorder/80 text-xs text-slate-400 cursor-pointer hover:border-indigo-500/50 hover:bg-darkBg transition-all group shadow-inner"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+            <span className="truncate">Ask UniPilot anything... (e.g. &ldquo;Can I bunk today?&rdquo;)</span>
+            <kbd className="hidden sm:inline-block ml-auto text-[10px] bg-slate-800/80 px-1.5 py-0.5 rounded text-slate-400 font-mono border border-slate-700">
+              ⌘K
+            </kbd>
+          </div>
+        )}
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">
-        {/* Living Sync Badge (Cross-Cutting Feature #15) */}
+        {/* Switch Portal Role Link */}
+        <button
+          onClick={() => navigate('/login')}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-darkBg border border-darkBorder text-slate-300 hover:text-white text-xs font-medium transition-colors"
+          title="Switch between Student and Parent/Teacher portal login"
+        >
+          {portalRole === 'guardian' ? (
+            <>
+              <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Student View</span>
+            </>
+          ) : (
+            <>
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span>Parent / Teacher Portal</span>
+            </>
+          )}
+        </button>
+
+        {/* Living Sync Badge */}
         {hasNewActivityForResume ? (
           <button
             onClick={() => {
@@ -61,7 +132,7 @@ export default function TopBar() {
         ) : (
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
             <Check className="w-3.5 h-3.5" />
-            <span className="font-medium text-[11px]">Resume & Portfolio Synced</span>
+            <span className="font-medium text-[11px]">Sync Active</span>
           </div>
         )}
 

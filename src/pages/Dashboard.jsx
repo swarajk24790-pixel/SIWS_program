@@ -27,7 +27,10 @@ export default function Dashboard() {
     assignments, 
     toggleAssignmentStatus, 
     setQuickAddOpen,
-    activities 
+    activities,
+    portalRole,
+    SAMPLE_STUDENTS,
+    selectStudent
   } = useApp();
 
   const [chatInput, setChatInput] = useState('');
@@ -48,6 +51,43 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Guardian / Faculty Inspection Banner */}
+      {portalRole === 'guardian' && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 via-indigo-950/50 to-slate-900 border border-purple-500/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
+              <Award className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-300">Parent / Faculty Monitor Mode</span>
+                <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200 text-[10px] font-semibold border border-purple-500/30">
+                  Full Dashboard Access
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Viewing academic dashboard of student: <strong className="text-white">{user.name}</strong> ({user.rollNo || 'Enrolled'})
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Switch Ward:</span>
+            <select
+              value={user.id}
+              onChange={(e) => selectStudent(e.target.value)}
+              className="px-3 py-1.5 rounded-xl bg-darkBg border border-purple-500/40 text-xs font-semibold text-white focus:outline-none focus:border-purple-400"
+            >
+              {SAMPLE_STUDENTS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.course.split(' ')[0]} • {s.attendancePct}%)
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Header Welcome & Quick Copilot Input Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

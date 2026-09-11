@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import CopilotChat from './pages/CopilotChat';
@@ -26,8 +27,9 @@ function ProtectedRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public & Onboarding Routes */}
+      {/* Public & Portal Routes */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/onboarding" element={<Onboarding />} />
 
       {/* Authenticated Workspace with MainLayout */}
